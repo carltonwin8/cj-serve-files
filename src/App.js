@@ -8,9 +8,6 @@ import Container from "@material-ui/core/Container";
 import Card from "@material-ui/core/Card";
 import FolderIcon from "@material-ui/icons/Folder";
 
-const tempErr =
-  "Error! Failed finding cj-photo-process in /Users/carltonjoseph/cj/cj2019/projects/cj-serve-files. Reseting dir to /Users/carltonjoseph/cj/cj2019/projects/cj-serve-files.";
-
 const useStyles = makeStyles(theme => ({
   root: {
     flexGrow: 1
@@ -25,22 +22,28 @@ const useStyles = makeStyles(theme => ({
   },
   card: {
     background: theme.palette.secondary.main,
+    color: theme.palette.secondary.contrastText,
     margin: theme.spacing(),
     padding: theme.spacing(),
     borderRadius: theme.spacing(2),
     "&:hover": {
-      background: theme.palette.primary.light
+      background: theme.palette.secondary.dark
     }
   },
   file: {
     display: "flex",
     alignItems: "center"
   },
+  icon: {
+    color: theme.palette.primary.light
+  },
   error: {
+    textAlign: "center",
     background: theme.palette.error.main,
     margin: theme.spacing(),
     padding: theme.spacing(),
     borderRadius: theme.spacing(2),
+    color: theme.palette.error.contrastText,
     "&:hover": {
       background: theme.palette.error.light
     }
@@ -57,7 +60,7 @@ const routes = {
 function App() {
   const [files, filesSet] = React.useState([]);
   const [pwd, pwdSet] = React.useState("");
-  const [err, errSet] = React.useState(tempErr);
+  const [err, errSet] = React.useState("");
   const classes = useStyles();
 
   const fetchFailed = item => e =>
@@ -147,7 +150,9 @@ function App() {
                 component="p"
                 className={classes.file}
               >
-                {file.isDirectory ? <FolderIcon color="primary" /> : null}{" "}
+                {file.isDirectory ? (
+                  <FolderIcon className={classes.icon} />
+                ) : null}{" "}
                 {file.name}
               </Typography>
             </Card>

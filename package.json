@@ -14,7 +14,7 @@
     "build": "react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject",
-    "server": "nodemon --watch server.js server.js"
+    "server": "nodemon --watch server.js --watch process-images.js server.js"
   },
   "eslintConfig": {
     "extends": "react-app"
@@ -34,6 +34,7 @@
   "proxy": "http://localhost:4000",
   "devDependencies": {
     "express": "^4.17.1",
+    "fs-extra": "^8.1.0",
     "morgan": "^1.9.1",
     "nodemon": "^1.19.1",
     "ws": "^7.1.1"

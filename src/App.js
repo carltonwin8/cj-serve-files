@@ -16,7 +16,15 @@ const routes = {
   pwd: "/api/pwd",
   back: "/api/back",
   chdir: "/api/chdir",
-  processImages: "/api/process-images"
+  processImages: "/api/process-images",
+  resetImages: "/api/reset-images"
+};
+
+const imgProcInitial = {
+  error: null,
+  processing: false,
+  raw: { end: 0, current: { extracted: 0, resized: 0 } },
+  jpeg: { end: 0, current: { resized: 0 } }
 };
 
 const useStyles = makeStyles(theme => ({
@@ -51,7 +59,7 @@ const useStyles = makeStyles(theme => ({
   },
   icon: {
     color: theme.palette.primary.light,
-    marginRight: theme.spacing(1)
+    marginRight: theme.spacing(0.7)
   },
   error: {
     textAlign: "center",
@@ -68,12 +76,10 @@ const useStyles = makeStyles(theme => ({
 
 function App() {
   const [files, filesSet] = React.useState([]);
+  const [filesReloadForce, filesReloadForceSet] = React.useState(true);
   const [pwd, pwdSet] = React.useState("");
   const [err, errSet] = React.useState("");
-  const [imgToProc, imgToProcSet] = React.useState(0);
-  const [imgProced, imgProcedSet] = React.useState(0);
-  const [imgProcing, imgProcingSet] = React.useState(false);
-  const wsConnection = React.useRef(null);
+  const [imgProc, imgProcSet] = React.useState(imgProcInitial);
 
   const classes = useStyles();
 
@@ -95,7 +101,7 @@ function App() {
       .then(data => data.json())
       .then(json => filesSet(json.files))
       .catch(fetchFailed(routes.files));
-  }, [pwd]);
+  }, [pwd, filesReloadForce]);
 
   React.useEffect(() => {
     fetch(routes.pwd)
@@ -104,18 +110,20 @@ function App() {
       .catch(fetchFailed(routes.pwd));
 
     const ws = new WebSocket(wsUrl);
-    wsConnection.current = ws;
     ws.onopen = _ => {
-      console.log("connected");
+      console.log("ws connected");
       ws.send(JSON.stringify({ status: "kick start ws connection" }));
     };
-    ws.onclose = _ => console.log("disconnected");
+    ws.onclose = _ => {
+      console.log("ws disconnected");
+      errSet("Server WebSocket Disconnected. Refresh client to reconnect.");
+    };
     ws.onmessage = e => {
-      console.log(e);
-      const { current, last, processing } = JSON.parse(e.data);
-      imgProcedSet(current);
-      imgToProcSet(last);
-      imgProcingSet(processing);
+      const data = JSON.parse(e.data);
+      console.log(data);
+      if (data.error) return errSet(data.error);
+      imgProcSet(data);
+      filesReloadForceSet(v => !v);
     };
   }, []);
 
@@ -143,7 +151,10 @@ function App() {
   };
 
   const preview = _ => {
-    console.log("connection current", wsConnection.current);
+    fetch(routes.resetImages)
+      .then(data => data.json())
+      .then(data => console.log(data) || filesReloadForceSet(v => !v))
+      .catch(fetchFailed(routes.resetImages));
   };
 
   return (
@@ -163,15 +174,19 @@ function App() {
             color="primary"
             className={classes.button}
             onClick={processImages}
-            disabled={imgProcing}
+            disabled={imgProc.processing}
           >
             Process
           </Button>
-          {imgToProc !== 0 && imgToProc !== imgProced && (
+          {imgProc.processing && (
             <Typography variant="body2" component="span">
-              {imgProced}/{imgToProc}
+              <b>Raw:</b> extracted:{imgProc.raw.current.extracted}/
+              {imgProc.raw.end}, resized:{imgProc.raw.current.extracted}/
+              {imgProc.raw.end},<b>Jpeg:</b> resized:
+              {imgProc.jpeg.current.resized}/{imgProc.jpeg.end}
             </Typography>
           )}
+
           <Button
             variant="contained"
             color="primary"

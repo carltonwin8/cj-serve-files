@@ -3,6 +3,8 @@ const morgan = require("morgan");
 const fs = require("fs");
 const WebSocket = require("ws");
 
+const images = require("./process-images");
+
 const app = express();
 
 app.use(morgan("combined"));
@@ -11,12 +13,15 @@ app.use(express.static("./build"));
 const port = process.env.PORT || 4000;
 const wssport = process.env.WSSPORT || 8080; // web socket server port
 
-app.get("/api/dirs/:path", (req, res) => res.json({ files: ["a", "b"] }));
+// process.chdir("/Users/carltonjoseph/dogs"); // debug test dir
+
+app.get("/api/dirs/:path", (_, res) => res.json({ files: ["a", "b"] }));
 app.get("/api/files", getFilesResp);
-app.get("/api/pwd", (req, res) => res.json({ pwd: process.cwd() }));
+app.get("/api/pwd", (_, res) => res.json({ pwd: process.cwd() }));
 app.get("/api/back", (req, res) => changeDir(req, res, "../"));
 app.get("/api/chdir/:dir", (req, res) => changeDir(req, res, req.params.dir));
-app.get("/api/process-images", processImages);
+app.get("/api/process-images", images.process(wsProgress));
+app.get("/api/reset-images", images.reset);
 app.get("/", (req, res) => res.send("Api server. All routes at API!"));
 
 const wss = new WebSocket.Server({ port: wssport });
@@ -25,13 +30,12 @@ wss.on("connection", function connection(ws) {
   console.log(`Web socket server listening on port ${wssport}!`);
   ws.on("message", m => console.log(`wss message`, m));
 });
-const appState = { image: { processing: false } };
 app.listen(port, () => console.log(`Http server listening on port ${port}!`));
 
 function changeDir(_, res, dir) {
   if (!fs.existsSync(dir))
     return res.status(410).json({
-      error: `Eraaror! Failed finding ${dir} in ${process.cwd()}.`,
+      error: `Error! Failed finding ${dir} in ${process.cwd()}.`,
       pwd: process.cwd()
     });
   process.chdir(dir);
@@ -73,20 +77,4 @@ function wsProgress(status) {
       client.readyState === WebSocket.OPEN &&
       client.send(JSON.stringify(status))
   );
-}
-
-function processImages(_, res) {
-  if (appState.image.processing)
-    return res
-      .status(410)
-      .json({ error: "Currently running another process." });
-  appState.image = { processing: true, last: 6, current: 0 };
-  appState.interval = setInterval(() => {
-    if (appState.image.current >= appState.image.last) {
-      appState.image = { processing: false, last: 0, current: 0 };
-      clearInterval(appState.interval);
-    } else appState.image.current++;
-    wsProgress(appState.image);
-  }, 500);
-  return res.json({ status: "Images are being processed." });
 }

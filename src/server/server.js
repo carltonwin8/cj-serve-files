@@ -13,7 +13,7 @@ app.use(express.static("./build"));
 const port = process.env.PORT || 4000;
 const wssport = process.env.WSSPORT || 8080; // web socket server port
 
-// process.chdir("/Users/carltonjoseph/dogs"); // debug test dir
+process.chdir("/Users/carltonjoseph/dogs"); // debug test dir
 
 app.get("/api/dirs/:path", (_, res) => res.json({ files: ["a", "b"] }));
 app.get("/api/files", getFilesResp);

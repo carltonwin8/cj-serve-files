@@ -6,10 +6,11 @@ import Paper from "@material-ui/core/Paper";
 import Container from "@material-ui/core/Container";
 import Card from "@material-ui/core/Card";
 import Button from "@material-ui/core/Button";
-import Tooltip from "@material-ui/core/Tooltip";
 import Box from "@material-ui/core/Box";
 import FolderIcon from "@material-ui/icons/Folder";
 import ComputerIcon from "@material-ui/icons/Computer";
+
+import ImgContext from "./ImgContext";
 
 import {
   wsUrl,
@@ -18,8 +19,6 @@ import {
   useStyles,
   HtmlTooltip
 } from "./App-const";
-
-const HTT = HtmlTooltip(Tooltip);
 
 const DisplayImages = React.lazy(() => import("./DispImgs"));
 
@@ -31,6 +30,7 @@ function App() {
   const [err, errSet] = React.useState("");
   const [imgProc, imgProcSet] = React.useState(imgProcInitial);
   const [img2display, img2displaySet] = React.useState(null);
+  const [selected, selectedSet] = React.useState([]);
 
   const classes = useStyles();
 
@@ -62,18 +62,15 @@ function App() {
 
     const ws = new WebSocket(wsUrl);
     ws.onopen = _ => {
-      console.log("ws connected");
       serverUpSet(true);
       ws.send(JSON.stringify({ status: "kick start ws connection" }));
     };
     ws.onclose = _ => {
-      console.log("ws disconnected");
       serverUpSet(false);
       errSet("Server WebSocket Disconnected. Refresh client to reconnect.");
     };
     ws.onmessage = e => {
       const data = JSON.parse(e.data);
-      console.log(data);
       if (data.error) return errSet(data.error);
       imgProcSet(data);
       filesReloadForceSet(v => !v);
@@ -105,7 +102,11 @@ function App() {
   const reset = _ => {
     fetch(routes.resetImages)
       .then(data => data.json())
-      .then(data => filesReloadForceSet(v => !v))
+      .then(data => {
+        if (data.error)
+          fetchFailed(routes.resetImages)({ message: data.error });
+        else filesReloadForceSet(v => !v);
+      })
       .catch(fetchFailed(routes.resetImages));
   };
 
@@ -114,118 +115,140 @@ function App() {
     else img2displaySet(null);
   };
 
+  const add = file => {
+    selectedSet(f => [...f, { ...file, selected: true }]);
+    filesSet(f =>
+      f.map(f =>
+        f.ino === file.ino
+          ? { ...f, selected: true }
+          : { ...f, selected: false }
+      )
+    );
+  };
+  const remove = file => {
+    selectedSet(s =>
+      s.filter(si => si.ino !== file.ino).map(s => ({ ...s, selected: false }))
+    );
+    filesSet(f =>
+      f.map(f => (f.ino === file.ino ? { ...f, selected: false } : f))
+    );
+  };
+
   return (
-    <div className={classes.root}>
-      <AppBar position="static">
-        <Toolbar>
-          <Typography variant="h6" color="inherit" className={classes.root}>
-            Files
-          </Typography>
-          <div style={{ color: serverUp ? "inherit" : "red" }}>
-            <HTT
-              title={
-                <Typography color="inherit">
-                  Websocket Status:{" "}
-                  <Box fontWeight="fontWeightBold" component="span">
-                    {serverUp ? "connected" : "disconnected"}
-                  </Box>
-                </Typography>
-              }
-            >
-              <ComputerIcon />
-            </HTT>
-          </div>
-        </Toolbar>
-      </AppBar>
-
-      <Paper className={classes.dirs}>
-        <Container>
-          <Button
-            variant="contained"
-            color="primary"
-            className={classes.button}
-            onClick={processImages}
-            disabled={imgProc.processing}
-          >
-            Process
-          </Button>
-          {imgProc.processing && (
-            <Typography variant="body2" component="span">
-              <b>Raw:</b> extracted:{imgProc.raw.current.extracted}/
-              {imgProc.raw.end}, resized:{imgProc.raw.current.extracted}/
-              {imgProc.raw.end},<b>Jpeg:</b> resized:
-              {imgProc.jpeg.current.resized}/{imgProc.jpeg.end}
+    <ImgContext.Provider value={{ files, selected, add, remove }}>
+      <div className={classes.root}>
+        <AppBar position="static">
+          <Toolbar>
+            <Typography variant="h6" color="inherit" className={classes.root}>
+              Files
             </Typography>
-          )}
+            <div style={{ color: serverUp ? "inherit" : "red" }}>
+              <HtmlTooltip
+                title={
+                  <Typography color="inherit">
+                    Websocket Status:{" "}
+                    <Box fontWeight="fontWeightBold" component="span">
+                      {serverUp ? "connected" : "disconnected"}
+                    </Box>
+                  </Typography>
+                }
+              >
+                <ComputerIcon />
+              </HtmlTooltip>
+            </div>
+          </Toolbar>
+        </AppBar>
 
-          <Button
-            variant="contained"
-            color="primary"
-            className={classes.button}
-            onClick={reset}
-          >
-            Reset
-          </Button>
-          <Button
-            variant="contained"
-            color="primary"
-            className={classes.button}
-            onClick={preview}
-          >
-            Preview
-          </Button>
-        </Container>
-        <Container>
-          <Typography variant="h6" component="span">
-            Directory:
-          </Typography>{" "}
-          <Typography variant="body2" component="span">
-            {pwd}
-          </Typography>
-          {err && (
-            <Typography
-              variant="body2"
-              component="p"
-              onClick={() => errSet("")}
-              className={classes.error}
+        <Paper className={classes.dirs}>
+          <Container>
+            <Button
+              variant="contained"
+              color="primary"
+              className={classes.button}
+              onClick={processImages}
+              disabled={imgProc.processing}
             >
-              {err} <b>Click to clear.</b>
-            </Typography>
-          )}
-        </Container>
-        <Container className={classes.gridC}>
-          {pwd !== "/" && err.length === 0 ? (
-            <Card className={classes.card} onClick={back}>
-              <Typography variant="body2" component="p">
-                ..
+              Process
+            </Button>
+            {imgProc.processing && (
+              <Typography variant="body2" component="span">
+                <b>Raw:</b> extracted:{imgProc.raw.current.extracted}/
+                {imgProc.raw.end}, resized:{imgProc.raw.current.extracted}/
+                {imgProc.raw.end},<b>Jpeg:</b> resized:
+                {imgProc.jpeg.current.resized}/{imgProc.jpeg.end}
               </Typography>
-            </Card>
-          ) : null}
-          {files.map(file => (
-            <Card
-              className={classes.card}
-              key={file.ino}
-              onClick={() => clicked(file)}
+            )}
+
+            <Button
+              variant="contained"
+              color="primary"
+              className={classes.button}
+              onClick={reset}
             >
+              Reset
+            </Button>
+            <Button
+              variant="contained"
+              color="primary"
+              className={classes.button}
+              onClick={preview}
+            >
+              Preview
+            </Button>
+          </Container>
+          <Container>
+            <Typography variant="h6" component="span">
+              Directory:
+            </Typography>{" "}
+            <Typography variant="body2" component="span">
+              {pwd}
+            </Typography>
+            {err && (
               <Typography
                 variant="body2"
                 component="p"
-                className={classes.file}
+                onClick={() => errSet("")}
+                className={classes.error}
               >
-                {file.isDirectory ? (
-                  <FolderIcon className={classes.icon} />
-                ) : null}{" "}
-                {file.name}
+                {err} <b>Click to clear.</b>
               </Typography>
-            </Card>
-          ))}
-        </Container>
-      </Paper>
-      <Suspense fallback={<div>Loading images</div>}>
-        {/* {img2display && <DisplayImages {...{ pwd, files }} />} */}
-        {<DisplayImages {...{ pwd, files }} />}
-      </Suspense>
-    </div>
+            )}
+          </Container>
+          <Container className={classes.gridC}>
+            {pwd !== "/" && err.length === 0 ? (
+              <Card className={classes.card} onClick={back}>
+                <Typography variant="body2" component="p">
+                  ..
+                </Typography>
+              </Card>
+            ) : null}
+            {files.map(file => (
+              <Card
+                className={classes.card}
+                key={file.ino}
+                onClick={() => clicked(file)}
+              >
+                <Typography
+                  variant="body2"
+                  component="p"
+                  className={classes.file}
+                >
+                  {file.isDirectory ? (
+                    <FolderIcon className={classes.icon} />
+                  ) : null}{" "}
+                  {file.name}
+                </Typography>
+              </Card>
+            ))}
+          </Container>
+        </Paper>
+        <Suspense fallback={<div>Loading images</div>}>
+          {/* {img2display && <DisplayImages {...{ pwd, files }} />} */}
+          {<DisplayImages add={false} />}
+          {<DisplayImages add={true} />}
+        </Suspense>
+      </div>
+    </ImgContext.Provider>
   );
 }
 

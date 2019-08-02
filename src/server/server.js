@@ -2,8 +2,9 @@ const express = require("express");
 const morgan = require("morgan");
 const fs = require("fs");
 const WebSocket = require("ws");
+const path = require("path");
 
-const images = require("./process-images");
+const images = require("./proc-imgs");
 const routes = require("../common/routes");
 
 const app = express();
@@ -23,6 +24,9 @@ app.get(routes.back, (req, res) => chDir(req, res, "../"));
 app.get(`${routes.chdir}/:dir`, (req, res) => chDir(req, res, req.params.dir));
 app.get(routes.processImages, images.process(wsProgress));
 app.get(routes.resetImages, images.reset);
+app.get(`${routes.getImages}/:img`, (req, res) =>
+  getImg(req, res, req.params.img)
+);
 
 const wss = new WebSocket.Server({ port: wssport });
 let wsConnection;
@@ -77,4 +81,8 @@ function wsProgress(status) {
       client.readyState === WebSocket.OPEN &&
       client.send(JSON.stringify(status))
   );
+}
+
+function getImg(_, res, img) {
+  res.sendFile(path.join(process.cwd(), img));
 }

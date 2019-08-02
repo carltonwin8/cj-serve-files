@@ -4,5 +4,6 @@ module.exports = {
   back: "/api/back",
   chdir: "/api/chdir",
   processImages: "/api/process-images",
-  resetImages: "/api/reset-images"
+  resetImages: "/api/reset-images",
+  getImages: "/api/images"
 };

@@ -6,11 +6,12 @@ import Paper from "@material-ui/core/Paper";
 import Container from "@material-ui/core/Container";
 import Card from "@material-ui/core/Card";
 import Button from "@material-ui/core/Button";
+import Tooltip from "@material-ui/core/Tooltip";
 import FolderIcon from "@material-ui/icons/Folder";
 import ComputerIcon from "@material-ui/icons/Computer";
 
 import { wsUrl, routes, imgProcInitial, useStyles } from "./App-const";
-const DisplayImages = React.lazy(() => import("./DisplayImages"));
+const DisplayImages = React.lazy(() => import("./DispImgs"));
 
 function App() {
   const [files, filesSet] = React.useState([]);
@@ -111,7 +112,13 @@ function App() {
             Files
           </Typography>
           <div style={{ color: serverUp ? "inherit" : "red" }}>
-            <ComputerIcon />
+            <Tooltip
+              title={`Server Websocket Status: ${
+                serverUp ? "connected" : "disconnected"
+              }`}
+            >
+              <ComputerIcon />
+            </Tooltip>
           </div>
         </Toolbar>
       </AppBar>
@@ -200,8 +207,8 @@ function App() {
         </Container>
       </Paper>
       <Suspense fallback={<div>Loading images</div>}>
-        {/*img2display && <DisplayImages {...{ pwd, files }} /> */}
-        {<DisplayImages {...{ pwd, files }} />}
+        {img2display && <DisplayImages {...{ pwd, files }} />}
+        {/*<DisplayImages {...{ pwd, files }} /> */}
       </Suspense>
     </div>
   );

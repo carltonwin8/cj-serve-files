@@ -7,10 +7,20 @@ import Container from "@material-ui/core/Container";
 import Card from "@material-ui/core/Card";
 import Button from "@material-ui/core/Button";
 import Tooltip from "@material-ui/core/Tooltip";
+import Box from "@material-ui/core/Box";
 import FolderIcon from "@material-ui/icons/Folder";
 import ComputerIcon from "@material-ui/icons/Computer";
 
-import { wsUrl, routes, imgProcInitial, useStyles } from "./App-const";
+import {
+  wsUrl,
+  routes,
+  imgProcInitial,
+  useStyles,
+  HtmlTooltip
+} from "./App-const";
+
+const HTT = HtmlTooltip(Tooltip);
+
 const DisplayImages = React.lazy(() => import("./DispImgs"));
 
 function App() {
@@ -112,13 +122,18 @@ function App() {
             Files
           </Typography>
           <div style={{ color: serverUp ? "inherit" : "red" }}>
-            <Tooltip
-              title={`Server Websocket Status: ${
-                serverUp ? "connected" : "disconnected"
-              }`}
+            <HTT
+              title={
+                <Typography color="inherit">
+                  Websocket Status:{" "}
+                  <Box fontWeight="fontWeightBold" component="span">
+                    {serverUp ? "connected" : "disconnected"}
+                  </Box>
+                </Typography>
+              }
             >
               <ComputerIcon />
-            </Tooltip>
+            </HTT>
           </div>
         </Toolbar>
       </AppBar>
@@ -207,8 +222,8 @@ function App() {
         </Container>
       </Paper>
       <Suspense fallback={<div>Loading images</div>}>
-        {img2display && <DisplayImages {...{ pwd, files }} />}
-        {/*<DisplayImages {...{ pwd, files }} /> */}
+        {/* {img2display && <DisplayImages {...{ pwd, files }} />} */}
+        {<DisplayImages {...{ pwd, files }} />}
       </Suspense>
     </div>
   );

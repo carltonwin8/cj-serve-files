@@ -53,7 +53,9 @@ const processImages = wsProgress => (_, res) => {
   res.json({ status: "Image processing started." });
 
   //    wsProgress(appState.image);
-  const size = "1620x1080";
+  //const size = "1620x1080";
+  //const size = "150x100";
+  const size = "75x50";
   const rawDir = path.join(cwd, "raw");
   const jpgDir = path.join(cwd, "jpg");
   const resizeDir = path.join(cwd, "resized", "size_" + size);

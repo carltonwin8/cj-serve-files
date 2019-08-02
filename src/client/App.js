@@ -1,85 +1,25 @@
-import React from "react";
-import { makeStyles } from "@material-ui/core/styles";
+import React, { Suspense } from "react";
 import AppBar from "@material-ui/core/AppBar";
 import Toolbar from "@material-ui/core/Toolbar";
 import Typography from "@material-ui/core/Typography";
 import Paper from "@material-ui/core/Paper";
 import Container from "@material-ui/core/Container";
 import Card from "@material-ui/core/Card";
-import FolderIcon from "@material-ui/icons/Folder";
 import Button from "@material-ui/core/Button";
+import FolderIcon from "@material-ui/icons/Folder";
+import ComputerIcon from "@material-ui/icons/Computer";
 
-const wsUrl = "ws://localhost:8080";
-
-const routes = {
-  files: "/api/files",
-  pwd: "/api/pwd",
-  back: "/api/back",
-  chdir: "/api/chdir",
-  processImages: "/api/process-images",
-  resetImages: "/api/reset-images"
-};
-
-const imgProcInitial = {
-  error: null,
-  processing: false,
-  raw: { end: 0, current: { extracted: 0, resized: 0 } },
-  jpeg: { end: 0, current: { resized: 0 } }
-};
-
-const useStyles = makeStyles(theme => ({
-  root: {
-    flexGrow: 1
-  },
-  dirs: {
-    padding: theme.spacing(3, 2),
-    margin: theme.spacing(3, 2)
-  },
-  button: {
-    padding: theme.spacing(1),
-    margin: theme.spacing(1)
-  },
-  gridC: {
-    display: "flex",
-    flexWrap: "wrap"
-  },
-  card: {
-    background: theme.palette.secondary.main,
-    color: theme.palette.secondary.contrastText,
-    margin: theme.spacing(1),
-    padding: theme.spacing(1),
-    borderRadius: theme.spacing(2),
-    "&:hover": {
-      background: theme.palette.secondary.dark
-    }
-  },
-  file: {
-    display: "flex",
-    alignItems: "center"
-  },
-  icon: {
-    color: theme.palette.primary.light,
-    marginRight: theme.spacing(0.7)
-  },
-  error: {
-    textAlign: "center",
-    background: theme.palette.error.main,
-    margin: theme.spacing(1),
-    padding: theme.spacing(1),
-    borderRadius: theme.spacing(2),
-    color: theme.palette.error.contrastText,
-    "&:hover": {
-      background: theme.palette.error.light
-    }
-  }
-}));
+import { wsUrl, routes, imgProcInitial, useStyles } from "./App-const";
+const DisplayImages = React.lazy(() => import("./DisplayImages"));
 
 function App() {
   const [files, filesSet] = React.useState([]);
   const [filesReloadForce, filesReloadForceSet] = React.useState(true);
   const [pwd, pwdSet] = React.useState("");
+  const [serverUp, serverUpSet] = React.useState("");
   const [err, errSet] = React.useState("");
   const [imgProc, imgProcSet] = React.useState(imgProcInitial);
+  const [img2display, img2displaySet] = React.useState(null);
 
   const classes = useStyles();
 
@@ -112,10 +52,12 @@ function App() {
     const ws = new WebSocket(wsUrl);
     ws.onopen = _ => {
       console.log("ws connected");
+      serverUpSet(true);
       ws.send(JSON.stringify({ status: "kick start ws connection" }));
     };
     ws.onclose = _ => {
       console.log("ws disconnected");
+      serverUpSet(false);
       errSet("Server WebSocket Disconnected. Refresh client to reconnect.");
     };
     ws.onmessage = e => {
@@ -146,24 +88,31 @@ function App() {
   const processImages = _ => {
     fetch(routes.processImages)
       .then(data => data.json())
-      .then(data => console.log(data))
       .catch(fetchFailed(routes.processImages));
   };
 
-  const preview = _ => {
+  const reset = _ => {
     fetch(routes.resetImages)
       .then(data => data.json())
-      .then(data => console.log(data) || filesReloadForceSet(v => !v))
+      .then(data => filesReloadForceSet(v => !v))
       .catch(fetchFailed(routes.resetImages));
+  };
+
+  const preview = _ => {
+    if (!img2display) img2displaySet({ image: "bob" });
+    else img2displaySet(null);
   };
 
   return (
     <div className={classes.root}>
       <AppBar position="static">
         <Toolbar>
-          <Typography variant="h6" color="inherit">
+          <Typography variant="h6" color="inherit" className={classes.root}>
             Files
           </Typography>
+          <div style={{ color: serverUp ? "inherit" : "red" }}>
+            <ComputerIcon />
+          </div>
         </Toolbar>
       </AppBar>
 
@@ -187,6 +136,14 @@ function App() {
             </Typography>
           )}
 
+          <Button
+            variant="contained"
+            color="primary"
+            className={classes.button}
+            onClick={reset}
+          >
+            Reset
+          </Button>
           <Button
             variant="contained"
             color="primary"
@@ -242,6 +199,10 @@ function App() {
           ))}
         </Container>
       </Paper>
+      <Suspense fallback={<div>Loading images</div>}>
+        {/*img2display && <DisplayImages {...{ pwd, files }} /> */}
+        {<DisplayImages {...{ pwd, files }} />}
+      </Suspense>
     </div>
   );
 }

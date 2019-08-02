@@ -4,6 +4,7 @@ const fs = require("fs");
 const WebSocket = require("ws");
 
 const images = require("./process-images");
+const routes = require("../common/routes");
 
 const app = express();
 
@@ -13,16 +14,15 @@ app.use(express.static("./build"));
 const port = process.env.PORT || 4000;
 const wssport = process.env.WSSPORT || 8080; // web socket server port
 
-process.chdir("/Users/carltonjoseph/dogs"); // debug test dir
+//process.chdir("/Users/carltonjoseph/dogs"); // debug test dir
+process.chdir("/Users/carltonjoseph/dogs/resized/size_75x50"); // debug test dir
 
-app.get("/api/dirs/:path", (_, res) => res.json({ files: ["a", "b"] }));
-app.get("/api/files", getFilesResp);
-app.get("/api/pwd", (_, res) => res.json({ pwd: process.cwd() }));
-app.get("/api/back", (req, res) => changeDir(req, res, "../"));
-app.get("/api/chdir/:dir", (req, res) => changeDir(req, res, req.params.dir));
-app.get("/api/process-images", images.process(wsProgress));
-app.get("/api/reset-images", images.reset);
-app.get("/", (req, res) => res.send("Api server. All routes at API!"));
+app.get(routes.files, getFilesResp);
+app.get(routes.pwd, (_, res) => res.json({ pwd: process.cwd() }));
+app.get(routes.back, (req, res) => chDir(req, res, "../"));
+app.get(`${routes.chdir}/:dir`, (req, res) => chDir(req, res, req.params.dir));
+app.get(routes.processImages, images.process(wsProgress));
+app.get(routes.resetImages, images.reset);
 
 const wss = new WebSocket.Server({ port: wssport });
 let wsConnection;
@@ -32,7 +32,7 @@ wss.on("connection", function connection(ws) {
 });
 app.listen(port, () => console.log(`Http server listening on port ${port}!`));
 
-function changeDir(_, res, dir) {
+function chDir(_, res, dir) {
   if (!fs.existsSync(dir))
     return res.status(410).json({
       error: `Error! Failed finding ${dir} in ${process.cwd()}.`,
